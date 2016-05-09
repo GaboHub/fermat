@@ -1,6 +1,7 @@
 package com.bitdubai.fermat_tky_android_sub_app_artist_identity_bitdubai.fragments;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -37,9 +38,9 @@ import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsM
 import com.bitdubai.fermat_api.layer.all_definition.util.Validate;
 import com.bitdubai.fermat_api.layer.dmp_engine.sub_app_runtime.enums.SubApps;
 
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.enums.UnexpectedSubAppExceptionSeverity;
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedSubAppExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_tky_android_sub_app_artist_identity_bitdubai.R;
 import com.bitdubai.fermat_tky_android_sub_app_artist_identity_bitdubai.popup.PresentationTokenlyArtistUserIdentityDialog;
 import com.bitdubai.fermat_tky_android_sub_app_artist_identity_bitdubai.session.SessionConstants;
@@ -101,6 +102,7 @@ public class TokenlyArtistIdentityCreateProfile extends AbstractFermatFragment {
     private boolean contextMenuInUse = false;
     private boolean authenticationSuccessful = false;
     private boolean isWaitingForResponse = false;
+    private ProgressDialog tokenlyRequestDialog;
 
     private Handler handler;
 
@@ -245,33 +247,38 @@ public class TokenlyArtistIdentityCreateProfile extends AbstractFermatFragment {
             @Override
             public void onClick(View view) {
                 CommonLogger.debug(TAG, "Entrando en createButton.setOnClickListener");
-
-
-                int resultKey = 0;
-                try {
-                    if(!isWaitingForResponse){
-                        resultKey = createNewIdentity();
-                        switch (resultKey) {
-                            case CREATE_IDENTITY_SUCCESS:
-
-                                break;
-                            case CREATE_IDENTITY_FAIL_MODULE_EXCEPTION:
-                                Toast.makeText(getActivity(), "Error al crear la identidad", Toast.LENGTH_LONG).show();
-                                break;
-                            case CREATE_IDENTITY_FAIL_NO_VALID_DATA:
-                                Toast.makeText(getActivity(), "La data no es valida", Toast.LENGTH_LONG).show();
-                                break;
-                            case CREATE_IDENTITY_FAIL_MODULE_IS_NULL:
-                                Toast.makeText(getActivity(), "No se pudo acceder al module manager, es null", Toast.LENGTH_LONG).show();
-                                break;
+                tokenlyRequestDialog = new ProgressDialog(getContext());
+                tokenlyRequestDialog.setMessage("Please Wait");
+                tokenlyRequestDialog.setTitle("Connecting to Tokenly");
+                tokenlyRequestDialog.show();
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if(!isWaitingForResponse){
+                                int resultKey = createNewIdentity();
+                                switch (resultKey) {
+                                    case CREATE_IDENTITY_SUCCESS:
+                                        break;
+                                    case CREATE_IDENTITY_FAIL_MODULE_EXCEPTION:
+                                        Toast.makeText(getActivity(), "Error al crear la identidad", Toast.LENGTH_LONG).show();
+                                        break;
+                                    case CREATE_IDENTITY_FAIL_NO_VALID_DATA:
+                                        Toast.makeText(getActivity(), "La data no es valida", Toast.LENGTH_LONG).show();
+                                        break;
+                                    case CREATE_IDENTITY_FAIL_MODULE_IS_NULL:
+                                        Toast.makeText(getActivity(), "No se pudo acceder al module manager, es null", Toast.LENGTH_LONG).show();
+                                        break;
+                                }
+                            }else{
+                                tokenlyRequestDialog.dismiss();
+                                Toast.makeText(getActivity(), "Waiting for Tokenly API response, please wait.", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (InvalidParameterException e) {
+                            e.printStackTrace();
                         }
-                    }else
-                        Toast.makeText(getActivity(), "Waiting for Tokenly API response, please wait.", Toast.LENGTH_SHORT).show();
-                } catch (InvalidParameterException e) {
-                    e.printStackTrace();
-                }
-
-
+                    }
+                });
             }
         });
     }
@@ -469,6 +476,7 @@ public class TokenlyArtistIdentityCreateProfile extends AbstractFermatFragment {
             }
             return CREATE_IDENTITY_FAIL_MODULE_IS_NULL;
         }
+        tokenlyRequestDialog.dismiss();
         return CREATE_IDENTITY_FAIL_NO_VALID_DATA;
 
     }
@@ -524,23 +532,26 @@ public class TokenlyArtistIdentityCreateProfile extends AbstractFermatFragment {
             isWaitingForResponse = false;
             if(!authenticationSuccessful){
                 //I'll launch a toast
+                tokenlyRequestDialog.dismiss();
                 Toast.makeText(
                         getActivity(),
                         "Authentication credentials are invalid.",
                         Toast.LENGTH_SHORT).show();
             }
             if(Validate.isObjectNull(artist)){
+                tokenlyRequestDialog.dismiss();
                 Toast.makeText(getActivity(), "The tokenly authentication failed.", Toast.LENGTH_SHORT).show();
             }else{
                 if(isUpdate){
+                    tokenlyRequestDialog.dismiss();
                     Toast.makeText(getActivity(), "Identity updated", Toast.LENGTH_SHORT).show();
                     getActivity().onBackPressed();
                 }else{
+                    tokenlyRequestDialog.dismiss();
                     Toast.makeText(getActivity(), "Identity created", Toast.LENGTH_SHORT).show();
                     getActivity().onBackPressed();
                 }
             }
-
         }
 
         @Override

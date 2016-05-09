@@ -34,6 +34,9 @@ import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFra
 import com.bitdubai.fermat_android_api.layer.definition.wallet.utils.ImagesUtils;
 import com.bitdubai.fermat_android_api.ui.transformation.CircleTransform;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedSubAppExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.exceptions.InvalidParameterException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
@@ -49,9 +52,6 @@ import com.bitdubai.fermat_art_api.layer.identity.artist.interfaces.Artist;
 import com.bitdubai.fermat_art_api.layer.sub_app_module.identity.Artist.ArtistIdentityManagerModule;
 import com.bitdubai.fermat_art_api.layer.sub_app_module.identity.Artist.ArtistIdentitySettings;
 import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubAppResourcesProviderManager;
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.enums.UnexpectedSubAppExceptionSeverity;
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_pip_api.layer.platform_service.error_manager.interfaces.ErrorManager;
 
 import com.bitdubai.sub_app.artist_identity.R;
 import com.squareup.picasso.Picasso;
@@ -222,8 +222,7 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
         ArtExternalPlatform[] externalPlatforms = ArtExternalPlatform.values();
         for (int i=0; i<externalPlatforms.length;i++){
             if(externalPlatforms[i].getCode().equals(
-                    identitySelected.getExternalPlatform().getCode()))
-            {
+                    identitySelected.getExternalPlatform().getCode())){
                 mArtistExternalPlatform.setSelection(i + 1);
                 try{
                     List<UUID> externalIdentityIDList = getArtistIdentityIdByPlatform(externalPlatforms[i]);
@@ -254,20 +253,22 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
                 }catch (Exception e){
 
                 }
+                break;
+
             }
         }
-        for (int i=0; i<externalPlatforms.length;i++){
+        /*for (int i=0; i<externalPlatforms.length;i++){
             if(externalPlatforms[i] == identitySelected.getExternalPlatform()){
-                mArtistExternalPlatform.setSelection(i);
+                mArtistExternalPlatform.setSelection(i+1);
                 break;
             }
-        }
-        if(Validate.isValidString(identitySelected.getExternalUsername())){
+        }*/
+        /*if(Validate.isValidString(identitySelected.getExternalUsername())){
             arraySpinner = new ArrayList<>();
             arraySpinner.add(identitySelected.getExternalUsername());
             adapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, arraySpinner);
             mArtistExternalName.setAdapter(adapter);
-        }
+        }*/
         arraySpinner = ExposureLevel.getArrayItems();
         adapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, arraySpinner);
         mArtistExposureLevel.setAdapter(adapter);
@@ -375,8 +376,9 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
 
     private int createNewIdentity() throws InvalidParameterException {
         UUID externalIdentityID = null;
-        if(!mArtistExternalName.getSelectedItem().equals(mArtistExternalName.getItemAtPosition(0))){
-            ArtExternalPlatform artExternalPlatform = ArtExternalPlatform.getArtExternalPlatformByLabel(mArtistExternalPlatform.getSelectedItem().toString());
+        ArtExternalPlatform artExternalPlatform = ArtExternalPlatform.getDefaultExternalPlatform();
+        if(!mArtistExternalPlatform.getSelectedItem().equals(mArtistExternalPlatform.getItemAtPosition(0))){
+            artExternalPlatform = ArtExternalPlatform.getArtExternalPlatformByLabel(mArtistExternalPlatform.getSelectedItem().toString());
             if(artExternalPlatform !=null){
                 List<UUID> identityByPlatformList = new ArrayList<>();
                 try{
@@ -390,15 +392,14 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
             }
         }
         String artistName = mArtistUserName.getText().toString();
-        ArtExternalPlatform externalPlatform = ArtExternalPlatform.getDefaultExternalPlatform();
         String externalUsername = "";
-        if(mArtistExternalPlatform.isSelected()){
+        /*if(mArtistExternalPlatform.isSelected()){
             externalPlatform = ArtExternalPlatform.getArtExternalPlatformByLabel(
                     mArtistExternalPlatform.getSelectedItem().toString());
         }
         if(mArtistExternalName.getCount()>1){
             externalUsername = mArtistExternalName.getSelectedItem().toString();
-        }
+        }*/
 
         ExposureLevel exposureLevel = ExposureLevel.getExposureLevelByLabel(mArtistExposureLevel.getSelectedItem().toString());
         ArtistAcceptConnectionsType artistAcceptConnectionsType = ArtistAcceptConnectionsType.getArtistAcceptConnectionsTypeByLabel(mArtistAcceptConnectionsType.getSelectedItem().toString());
@@ -418,7 +419,7 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
                                 exposureLevel,
                                 artistAcceptConnectionsType,
                                 externalIdentityID,
-                                externalPlatform);
+                                artExternalPlatform);
                     }else{
                         if(updateProfileImage)
                             moduleManager.updateArtistIdentity(
@@ -428,7 +429,7 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
                                     exposureLevel,
                                     artistAcceptConnectionsType,
                                     externalIdentityID,
-                                    externalPlatform,
+                                    artExternalPlatform,
                                     externalUsername);
                         else
                             moduleManager.updateArtistIdentity(
@@ -438,7 +439,7 @@ public class CreateArtistIndetityFragment extends AbstractFermatFragment<ArtistI
                                     exposureLevel,
                                     artistAcceptConnectionsType,
                                     externalIdentityID,
-                                    externalPlatform,
+                                    artExternalPlatform,
                                     externalUsername);
                     }
                 }catch (Exception e){
