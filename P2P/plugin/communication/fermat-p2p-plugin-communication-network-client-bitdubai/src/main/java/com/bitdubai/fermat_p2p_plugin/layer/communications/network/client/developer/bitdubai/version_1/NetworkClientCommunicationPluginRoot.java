@@ -145,10 +145,8 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
 
     @Override
     public FermatManager getManager() {
-        return this;
+        return null;
     }
-
-    public EventManager getEventManager() { return eventManager; }
 
     /**
      * Constructor
@@ -194,34 +192,76 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
             ClientContext.add(ClientContextItem.EVENT_MANAGER, eventManager);
             ClientContext.add(ClientContextItem.CLIENTS_CONNECTIONS_MANAGER, networkClientConnectionsManager);
 
+            /*
+             * get NodesProfile List From NodesProfileConnectionHistory table
+             */
+            nodesProfileList = getNodesProfileFromConnectionHistory();
+
+            if(nodesProfileList != null && nodesProfileList.size() >= 1){
+
+                networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
+                        nodesProfileList.get(0).getIp() + ":" + nodesProfileList.get(0).getDefaultPort(),
+                        eventManager,
+                        locationManager,
+                        identity,
+                        this,
+                        0,
+                        Boolean.FALSE,
+                        nodesProfileList.get(0)
+                );
+
+
+            }else {
+
+                /*
+                * get NodesProfile List From Restful in Seed Node
+                */
+                nodesProfileList = getNodesProfileList();
+
+                if (nodesProfileList != null && nodesProfileList.size() > 0) {
+
+                    networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
+                            nodesProfileList.get(0).getIp() + ":" + nodesProfileList.get(0).getDefaultPort(),
+                            eventManager,
+                            locationManager,
+                            identity,
+                            this,
+                            0,
+                            Boolean.FALSE,
+                            nodesProfileList.get(0)
+                    );
+
+                } else {
+
+                    networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
+                            NetworkClientCommunicationPluginRoot.SERVER_IP + ":" + HardcodeConstants.DEFAULT_PORT,
+                            eventManager,
+                            locationManager,
+                            identity,
+                            this,
+                            -1,
+                            Boolean.FALSE,
+                            null
+                    );
+
+                }
+            }
+
             p2PLayerManager.register(this);
 
             connectivityManager.registerListener(new NetworkStateReceiver() {
                 @Override
                 public void networkAvailable(DeviceNetwork deviceNetwork) {
                     System.out.println("########################################\n");
-                    System.out.println("Network available!!!!\n+" + "NetworkType: " + deviceNetwork);
+                    System.out.println("Netowork available!!!!\n+" + "NetworkType: " + deviceNetwork);
                     System.out.println("########################################\n");
-                    if(networkClientCommunicationConnection != null) {
-                        networkClientCommunicationConnection.setTryToReconnect(Boolean.TRUE);
-                        networkClientCommunicationConnection.initializeAndConnect();
-                    }
                 }
 
                 @Override
                 public void networkUnavailable() {
                     System.out.println("########################################\n");
-                    System.out.println("Network UNAVAILABLE!!!!\n");
+                    System.out.println("Netowork UNAVAILABLE!!!!\n");
                     System.out.println("########################################\n");
-
-                    if(networkClientCommunicationConnection != null) {
-                        networkClientCommunicationConnection.setTryToReconnect(Boolean.FALSE);
-                        try {
-                            networkClientCommunicationConnection.close();
-                        } catch (Exception exception) {
-                            exception.printStackTrace();
-                        }
-                    }
                 }
 
             });
@@ -412,8 +452,8 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
      */
     public void intentToConnectToOtherNode(Integer i){
 
-//        if(executorService != null)
-//            executorService.shutdownNow();
+        if(executorService != null)
+            executorService.shutdownNow();
 
         /*
          * if is the last index then connect to networkNode Harcoded
@@ -447,15 +487,15 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
 
         }
 
-        Runnable runnable = new Runnable(){
+        Thread thread = new Thread(){
             @Override
             public void run(){
                 networkClientCommunicationConnection.initializeAndConnect();
             }
         };
 
-        if(executorService==null) executorService = Executors.newSingleThreadExecutor();
-        executorService.submit(runnable);
+        executorService = Executors.newSingleThreadExecutor();
+        executorService.submit(thread);
 
     }
 
@@ -581,78 +621,18 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
 
         try {
 
-            /*
-             * get NodesProfile List From NodesProfileConnectionHistory table
-             */
-            nodesProfileList = getNodesProfileFromConnectionHistory();
-
-            if (nodesProfileList != null && nodesProfileList.size() >= 1) {
-
-                networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
-                        nodesProfileList.get(0).getIp() + ":" + nodesProfileList.get(0).getDefaultPort(),
-                        eventManager,
-                        locationManager,
-                        identity,
-                        this,
-                        0,
-                        Boolean.FALSE,
-                        nodesProfileList.get(0)
-                );
+            networkClientCommunicationConnection.initializeAndConnect();
 
 
-            } else {
 
-                /*
-                * get NodesProfile List From Restful in Seed Node
-                */
-
-                if (executorService == null) executorService = Executors.newSingleThreadExecutor();
-
-
-//                        nodesProfileList = getNodesProfileList();
-
-                if (nodesProfileList != null && nodesProfileList.size() > 0) {
-
-                    networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
-                            nodesProfileList.get(0).getIp() + ":" + nodesProfileList.get(0).getDefaultPort(),
-                            eventManager,
-                            locationManager,
-                            identity,
-                            NetworkClientCommunicationPluginRoot.this,
-                            0,
-                            Boolean.FALSE,
-                            nodesProfileList.get(0)
-                    );
-
-                } else {
-
-                    networkClientCommunicationConnection = new NetworkClientCommunicationConnection(
-                            NetworkClientCommunicationPluginRoot.SERVER_IP + ":" + HardcodeConstants.DEFAULT_PORT,
-                            eventManager,
-                            locationManager,
-                            identity,
-                            NetworkClientCommunicationPluginRoot.this,
-                            -1,
-                            Boolean.FALSE,
-                            null
-                    );
-
-                }
-            }
-
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    networkClientCommunicationConnection.initializeAndConnect();
-                }
-            });
-
-           /*
+             /*
             * Create and Scheduled the supervisorConnectionAgent
             */
             final NetworkClientCommunicationSupervisorConnectionAgent supervisorConnectionAgent = new NetworkClientCommunicationSupervisorConnectionAgent(this);
             scheduledExecutorService.scheduleAtFixedRate(supervisorConnectionAgent, 5, 10, TimeUnit.SECONDS);
 
+//            executorService = Executors.newSingleThreadExecutor();
+//            executorService.submit(thread);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -672,18 +652,6 @@ public class NetworkClientCommunicationPluginRoot extends AbstractPlugin impleme
         }
 
 
-    }
-
-    @Override
-    public void stop() {
-        try {
-            executorService.shutdownNow();
-        }catch (Exception e){
-
-        }
-
-        scheduledExecutorService.shutdownNow();
-        super.stop();
     }
 
     @Override

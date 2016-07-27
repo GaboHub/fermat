@@ -138,6 +138,10 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
             e.printStackTrace();
         }
 
+        //list transaction on background
+       onRefresh();
+
+
     }
 
     @Nullable
@@ -182,15 +186,8 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
                 changeActivity(Activities.CCP_BITCOIN_WALLET_SEND_FORM_ACTIVITY,appSession.getAppPublicKey());
                 return true;
             }else {
-                if (id == 4) {
-                    changeActivity(Activities.CCP_BITCOIN_WALLET_REQUEST_FORM_ACTIVITY, appSession.getAppPublicKey());
-                    return true;
-                }
-                else {
-                    setUpPresentation();
-                    return true;
-                }
-
+                setUpPresentation();
+                return true;
             }
 
         } catch (Exception e) {

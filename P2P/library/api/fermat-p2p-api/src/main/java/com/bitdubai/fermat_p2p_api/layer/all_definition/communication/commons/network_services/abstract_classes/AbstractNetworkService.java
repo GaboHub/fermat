@@ -41,6 +41,7 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.cl
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.interfaces.P2PLayerManager;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.DiscoveryQueryParameters;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.agents.NetworkServicePendingMessagesSupervisorAgent;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.agents.NetworkServiceRegistrationProcessAgent;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.constants.NetworkServiceDatabaseConstants;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.daos.QueriesDao;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
@@ -67,16 +68,20 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.ne
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.exceptions.CantInitializeNetworkServiceProfileException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.exceptions.CantSendMessageException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.factories.NetworkServiceMessageFactory;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.interfaces.NetworkService;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.structure.NetworkServiceConnectionManager;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ActorProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.NetworkServiceProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.MessageContentType;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.P2pEventType;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.network_services.interfaces.NetworkService;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.CommunicationChannels;
+import com.bitdubai.fermat_p2p_api.layer.p2p_communication.MessagesStatus;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.commons.enums.FermatMessagesStatus;
 
+import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -159,6 +164,10 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
     /**
      * AGENTS DEFINITION ----->
      */
+    /**
+     * Represents the networkServiceRegistrationProcessAgent
+     */
+    private NetworkServiceRegistrationProcessAgent networkServiceRegistrationProcessAgent;
 
     /**
      * Represents the NetworkServicePendingMessagesSupervisorAgent
@@ -190,7 +199,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
      * @see AbstractPlugin#start()
      */
     @Override
-    public synchronized final void start() throws CantStartPluginException {
+    public final void start() throws CantStartPluginException {
 
         /*
          * Validate required resources
@@ -228,12 +237,18 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
 
             this.networkServiceConnectionManager = new NetworkServiceConnectionManager(this);
 
-            if (this.getConnection().isConnected() && this.getConnection().isRegistered())
-                this.getConnection().registerProfile(this.getProfile());
+            /*
+             * Initialize the agents and start
+             */
+//            this.networkServiceRegistrationProcessAgent = new NetworkServiceRegistrationProcessAgent(this);
+//            this.networkServiceRegistrationProcessAgent.start();
+            p2PLayerManager.register(this);
 
             onNetworkServiceStart();
 
         } catch (Exception exception) {
+
+            System.out.println(exception.toString());
 
             String context = "Plugin ID: " + pluginId + CantStartPluginException.CONTEXT_CONTENT_SEPARATOR
                     + "Database Name: " + NetworkServiceDatabaseConstants.DATABASE_NAME
@@ -395,6 +410,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
             /*
              * The database exists but cannot be open. I can not handle this situation.
              */
+            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_THIS_PLUGIN, cantOpenDatabaseException);
             throw new CantInitializeNetworkServiceDatabaseException(cantOpenDatabaseException);
 
         } catch (DatabaseNotFoundException e) {
@@ -417,6 +433,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
                 /*
                  * The database cannot be created. I can not handle this situation.
                  */
+                this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, cantOpenDatabaseException);
                 throw new CantInitializeNetworkServiceDatabaseException(cantOpenDatabaseException);
 
             }
@@ -516,28 +533,45 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
         queriesDao.deleteAll();
     }
 
-    public synchronized final void handleNetworkClientRegisteredEvent(final CommunicationChannels communicationChannel) throws FermatException {
+    public final void handleNetworkClientRegisteredEvent(final CommunicationChannels communicationChannel) throws FermatException {
+
+        if(networkServiceRegistrationProcessAgent != null && networkServiceRegistrationProcessAgent.getActive()) {
+            networkServiceRegistrationProcessAgent.stop();
+            networkServiceRegistrationProcessAgent = null;
+        }
 
         if (this.getConnection().isConnected() && this.getConnection().isRegistered())
             this.getConnection().registerProfile(this.getProfile());
+        else {
+            this.networkServiceRegistrationProcessAgent = new NetworkServiceRegistrationProcessAgent(this);
+            this.networkServiceRegistrationProcessAgent.start();
+        }
 
     }
 
     public final void handleNetworkClientCallConnected(NetworkClientCall networkClientCall) {
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(NetworkServiceDatabaseConstants.OUTGOING_MESSAGES_STATUS_COLUMN_NAME, MessagesStatus.PENDING_TO_SEND.getCode());
+        filters.put(NetworkServiceDatabaseConstants.OUTGOING_MESSAGES_RECEIVER_PUBLIC_KEY_COLUMN_NAME, networkClientCall.getProfile().getIdentityPublicKey());
 
         try {
             synchronized (this) {
                 /*
                  * Read all pending message from database
                  */
-                List<NetworkServiceMessage> messages = getNetworkServiceConnectionManager().getOutgoingMessagesDao().findPendingToSendMessagesByReceiverPublicKey(networkClientCall.getProfile().getIdentityPublicKey());
+                List<NetworkServiceMessage> messages = getNetworkServiceConnectionManager().getOutgoingMessagesDao().findAllPendingToSendByPublicKey(filters);
 
                 /*
                  * For each message
                  */
                 for (NetworkServiceMessage message : messages) {
+                    System.out.println("12345** Estado de conexión = "+networkClientCall.isConnected());
+                    System.out.println("12345** Intentando enviar mensaje= " +message.getContent());
 
-                    if (networkClientCall.isConnected()) {
+                    if (networkClientCall.isConnected() && (message.getFermatMessagesStatus() == FermatMessagesStatus.PENDING_TO_SEND)) {
+                        System.out.println("12345** INSIDE");
+                        System.out.println("12345** --Estado= " +message.getFermatMessagesStatus());
 
                         networkClientCall.sendPackageMessage(message);
 
@@ -548,11 +582,10 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
                         getNetworkServiceConnectionManager().getOutgoingMessagesDao().update(message);
 
                     } else {
-                        System.out.println("networkClientCall - Connection is NOT connected = " + networkClientCall.isConnected());
+                        System.out.println("networkClientCall - Connection is connected = " + networkClientCall.isConnected());
                     }
 
                 }
-                networkServiceConnectionManager.removeConnectionWaitingForResponse(networkClientCall.getProfile().getIdentityPublicKey());
                 /*
                  * Hang up the call
                  */
@@ -560,7 +593,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
             }
         } catch (Exception e) {
 
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
 
     }
@@ -605,7 +638,6 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
     public void handleActorUnreachableEvent(ActorProfile actorProfile) {
 
         checkFailedSentMessages(actorProfile.getIdentityPublicKey());
-        networkServiceConnectionManager.removeConnectionWaitingForResponse(actorProfile.getIdentityPublicKey());
         onActorUnreachable(actorProfile);
     }
 
@@ -622,11 +654,13 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
      * Notify the client when a incoming message is receive by the incomingTemplateNetworkServiceMessage
      * ant fire a new event
      *
-     * @param networkServiceMessage received
+     * @param incomingMessage received
      */
-    public final void onMessageReceived(NetworkServiceMessage networkServiceMessage) {
+    public final void onMessageReceived(String incomingMessage) {
 
         try {
+
+            NetworkServiceMessage networkServiceMessage = NetworkServiceMessage.parseContent(incomingMessage);
 
             //TODO networkServiceMessage.setContent(AsymmetricCryptography.decryptMessagePrivateKey(networkServiceMessage.getContent(), this.identity.getPrivateKey()));
             /*
@@ -634,10 +668,10 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
              */
             networkServiceMessage.setFermatMessagesStatus(FermatMessagesStatus.NEW_RECEIVED);
             networkServiceConnectionManager.getIncomingMessagesDao().create(networkServiceMessage);
-            onNewMessageReceived(networkServiceMessage);
+            networkServiceConnectionManager.getNetworkServiceRoot().onNewMessageReceived(networkServiceMessage);
 
         } catch (Exception e) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
     }
 
@@ -650,9 +684,9 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
                 this.networkServicePendingMessagesSupervisorAgent = new NetworkServicePendingMessagesSupervisorAgent(this);
 
             this.networkServicePendingMessagesSupervisorAgent.start();
-
+            System.out.println("12345** handleNetworkServiceRegisteredEvent starteado");
         } catch (Exception ex) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, ex);
+            System.out.println("Failed to start the messages supervisor agent - > NS: " + this.getProfile().getNetworkServiceType());
         }
 
         onNetworkServiceRegistered();
@@ -679,20 +713,20 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
                 try {
                     if (networkServicePendingMessagesSupervisorAgent != null)
                         this.networkServicePendingMessagesSupervisorAgent.pause();
-
-                    networkServiceConnectionManager.removeAllConnectionWaitingForResponse();
                 } catch (Exception ex) {
                     System.out.println("Failed to pause the messages supervisor agent - > NS: "+this.getProfile().getNetworkServiceType());
                 }
 
                 this.registered = Boolean.FALSE;
-
+/*
+                reprocessMessages();
+*/
                 onNetworkClientConnectionLost();
 
             }
 
         } catch (Exception e) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
 
     }
@@ -715,11 +749,8 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
             if(!networkClientManager.getConnection().isRegistered()) {
 
                 try {
-
                     if (networkServicePendingMessagesSupervisorAgent != null)
                         this.networkServicePendingMessagesSupervisorAgent.pause();
-
-                    networkServiceConnectionManager.removeAllConnectionWaitingForResponse();
                 } catch (Exception ex) {
                     System.out.println("Failed to pause the messages supervisor agent - > NS: "+this.getProfile().getNetworkServiceType());
                 }
@@ -731,7 +762,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
             }
 
         }catch (Exception e) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
 
     }
@@ -782,7 +813,14 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
 
         try {
 
-            List<NetworkServiceMessage> messages = getNetworkServiceConnectionManager().getOutgoingMessagesDao().findPendingToSendMessagesByReceiverPublicKey(destinationPublicKey);
+            /*
+             * Read all pending message from database
+             */
+            Map<String, Object> filters = new HashMap<>();
+            filters.put(NetworkServiceDatabaseConstants.OUTGOING_MESSAGES_RECEIVER_PUBLIC_KEY_COLUMN_NAME, destinationPublicKey                    );
+            filters.put(NetworkServiceDatabaseConstants.OUTGOING_MESSAGES_STATUS_COLUMN_NAME, MessagesStatus.PENDING_TO_SEND.getCode());
+
+            List<NetworkServiceMessage> messages = getNetworkServiceConnectionManager().getOutgoingMessagesDao().findAll(filters);
 
             for (NetworkServiceMessage fermatMessageCommunication: messages) {
 
@@ -814,7 +852,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
             }
 
         } catch(Exception e){
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
 
     }
@@ -826,6 +864,8 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
                                            final String                   broadcastCode           ) throws CantRequestProfileListException {
 
         try {
+
+            System.out.println("-------------- online actors discovery query requested: " + discoveryQueryParameters + " \n------------- " + new Timestamp(System.currentTimeMillis()));
 
             UUID queryId = getConnection().onlineActorsDiscoveryQuery(discoveryQueryParameters, getPublicKey());
 
@@ -845,8 +885,9 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
 
             return queryId;
 
-        } catch (Exception e){
+        }catch (Exception e){
 
+            System.out.println("Error sending query request: " + e.getMessage());
             throw new CantRequestProfileListException(e, "discoveryQueryParameters: "+discoveryQueryParameters+" - broadcastCode: "+broadcastCode, "Unhandled error trying to send a query request.");
         }
     }
@@ -854,9 +895,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
     /**
      * Method tha send a new Message
      */
-    public void sendNewMessage(final ActorProfile sender        ,
-                               final ActorProfile destination   ,
-                               final String       messageContent) throws CantSendMessageException {
+    public void sendNewMessage(ActorProfile sender, ActorProfile destination, String messageContent) throws CantSendMessageException {
 
         try {
 
@@ -899,6 +938,8 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
         System.out.println("Me llego un nuevo mensaje" + messageReceived);
     }
 
+
+
     public final synchronized void onNetworkServiceSentMessage(NetworkServiceMessage networkServiceMessage) {
 
         System.out.println("Message Delivered " + networkServiceMessage);
@@ -910,23 +951,7 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
 
             onSentMessage(networkServiceMessage);
         } catch (Exception e) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
-        }
-
-    }
-
-    public final synchronized void onNetworkServiceSentMessageError(NetworkServiceMessage networkServiceMessage) {
-
-        System.out.println("Message not delivered " + networkServiceMessage);
-
-        //networkServiceMessage.setContent(AsymmetricCryptography.decryptMessagePrivateKey(networkServiceMessage.getContent(), this.identity.getPrivateKey()));
-
-        try {
-            networkServiceConnectionManager.getOutgoingMessagesDao().markAsPendingToSend(networkServiceMessage);
-
-            onSentMessageError(networkServiceMessage);
-        } catch (Exception e) {
-            this.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            e.printStackTrace();
         }
 
     }
@@ -934,11 +959,6 @@ public abstract class AbstractNetworkService extends AbstractPlugin implements N
     public synchronized void onSentMessage(NetworkServiceMessage networkServiceMessage) {
 
     }
-
-    public synchronized void onSentMessageError(NetworkServiceMessage networkServiceMessage) {
-
-    }
-
 
     /**
      * Get the database instance

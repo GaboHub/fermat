@@ -114,7 +114,7 @@ public class AbstractBaseDao<E extends AbstractBaseEntity> {
 
             transaction.begin();
             connection.persist(entity);
-            connection.flush();
+            //connection.flush();
             transaction.commit();
 
         }catch (Exception e){
@@ -574,6 +574,8 @@ public class AbstractBaseDao<E extends AbstractBaseEntity> {
             }
 
             criteriaQuery.orderBy(criteriaBuilder.asc(entities.get("id")));
+            Root<E> entityRoot = criteriaQuery.from(entityClass);
+            criteriaQuery.select(entityRoot);
             TypedQuery<E> query = connection.createQuery(criteriaQuery);
             return query.getResultList();
 

@@ -21,10 +21,6 @@ public class CantInitializeChatNetworkServiceDatabaseException extends CHTExcept
         super(message, cause, context, possibleReason);
     }
 
-    public CantInitializeChatNetworkServiceDatabaseException(final Exception cause, final String context, final String possibleReason) {
-        super(DEFAULT_MESSAGE, cause, context, possibleReason);
-    }
-
     public CantInitializeChatNetworkServiceDatabaseException(final String message, final Exception cause) {
         this(message, cause, "", "");
     }

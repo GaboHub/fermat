@@ -162,4 +162,8 @@ public final class JPADaoFactory {
     static public ProfileRegistrationHistoryDao getProfileRegistrationHistoryDao() {
         return instance.profileRegistrationHistoryDao;
     }
+
+    static public JPADaoFactory getInstance(){
+        return instance;
+    }
 }

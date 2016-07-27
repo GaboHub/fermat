@@ -15,8 +15,8 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.ut
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.util.GsonProvider;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.context.NodeContext;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.context.NodeContextItem;
-import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.daos.DaoFactory;
-import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.NodesCatalog;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.jpa.daos.JPADaoFactory;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.jpa.entities.NodeCatalog;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.rest.RestFulServices;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -56,7 +56,7 @@ public class AvailableNodes implements RestFulServices {
     /**
      * Represent the daoFactory
      */
-    private DaoFactory daoFactory;
+    private JPADaoFactory daoFactory;
 
     /**
      * Represent the gson
@@ -67,7 +67,7 @@ public class AvailableNodes implements RestFulServices {
      * Constructor
      */
     public AvailableNodes(){
-        daoFactory = (DaoFactory) NodeContext.get(NodeContextItem.DAO_FACTORY);
+        daoFactory = JPADaoFactory.getInstance();
         this.gson = GsonProvider.getGson();
     }
 
@@ -106,12 +106,12 @@ public class AvailableNodes implements RestFulServices {
             /*
              * Get the node catalog list
              */
-            List<NodesCatalog> nodesCatalogs = daoFactory.getNodesCatalogDao().findAll();
+            List<NodeCatalog> nodesCatalogs = daoFactory.getNodeCatalogDao().list();
 
             /*
              * Filter and order
              */
-            List<NodesCatalog> nodesCatalogsFiltered = applyGeoLocationFilter(locationSource, nodesCatalogs);
+            List<NodeCatalog> nodesCatalogsFiltered = applyGeoLocationFilter(locationSource, nodesCatalogs);
 
             if(nodesCatalogsFiltered != null) {
 
@@ -119,19 +119,19 @@ public class AvailableNodes implements RestFulServices {
 
                 nodesCatalogsFiltered = (nodesCatalogsFiltered.size() > 10 ) ? nodesCatalogsFiltered.subList(0,5) : nodesCatalogsFiltered;
 
-                for (NodesCatalog nodesCatalog : nodesCatalogsFiltered) {
+                for (NodeCatalog nodesCatalog : nodesCatalogsFiltered) {
 
                     NodeProfile nodeProfile = new NodeProfile();
                     nodeProfile.setName((nodesCatalog.getName() != null ? nodesCatalog.getName() : null));
                     nodeProfile.setIp(nodesCatalog.getIp());
                     nodeProfile.setDefaultPort(nodesCatalog.getDefaultPort());
-                    nodeProfile.setIdentityPublicKey(nodesCatalog.getIdentityPublicKey());
+                    nodeProfile.setIdentityPublicKey(nodesCatalog.getId());
 
-                    if(nodesCatalog.getLastLocation() != null ){
+                    if(nodesCatalog.getLocation() != null ){
 
                         Location location = new NetworkNodeCommunicationDeviceLocation(
-                                nodesCatalog.getLastLocation().getLatitude() ,
-                                nodesCatalog.getLastLocation().getLongitude(),
+                                nodesCatalog.getLocation().getLatitude() ,
+                                nodesCatalog.getLocation().getLongitude(),
                                 0.0     ,
                                 0        ,
                                 0.0     ,
@@ -173,28 +173,28 @@ public class AvailableNodes implements RestFulServices {
      * @param nodesCatalogs
      * @return List<NodesCatalog>
      */
-    private List<NodesCatalog> applyGeoLocationFilter(Location clientLocation, List<NodesCatalog> nodesCatalogs) {
+    private List<NodeCatalog> applyGeoLocationFilter(Location clientLocation, List<NodeCatalog> nodesCatalogs) {
 
         /*
          * Hold the data ordered by distance
          */
-        Map<Double, NodesCatalog> orderedByDistance = new TreeMap<>();
+        Map<Double, NodeCatalog> orderedByDistance = new TreeMap<>();
 
         /*
          * For each node
          */
-        for (final NodesCatalog node: nodesCatalogs) {
+        for (final NodeCatalog node: nodesCatalogs) {
 
             /*
              * If component has a geo location
              */
-            if (node.getLastLocation().getLatitude() != null &&
-                    node.getLastLocation().getLongitude() != null){
+            if (node.getLocation().getLatitude() != null &&
+                    node.getLocation().getLongitude() != null){
 
 
                 Location nodeLocation = new DeviceLocation();
-                nodeLocation.setLatitude(node.getLastLocation().getLatitude());
-                nodeLocation.setLongitude(node.getLastLocation().getLongitude());
+                nodeLocation.setLatitude(node.getLocation().getLatitude());
+                nodeLocation.setLongitude(node.getLocation().getLongitude());
 
                 /*
                  * Calculate the distance between the two points

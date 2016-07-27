@@ -58,19 +58,6 @@ public class AndroidDatabaseRecord implements DatabaseTableRecord {
     }
 
     @Override
-    public Boolean getBooleanValue(String columnName) {
-
-        try {
-            if (values.get(columnName) != null)
-                return Boolean.parseBoolean(values.get(columnName).getValue());
-            else
-                return null;
-        } catch (NullPointerException nullPointerException) {
-            return null;
-        }
-    }
-
-    @Override
     public long getLongValue(String columnName) {
         try {
             if (values.get(columnName).getValue() != null)
@@ -182,20 +169,6 @@ public class AndroidDatabaseRecord implements DatabaseTableRecord {
 
         values.put(columnName, record);
 
-    }
-
-    /**
-     * <p>Set Integer field record value
-     *
-     * @param columnName name of the column to which is assigned the value
-     * @param value      column value in integer
-     */
-    @Override
-    public void setBooleanValue(String columnName, Boolean value) {
-
-        DatabaseRecord record = new AndroidRecord(columnName, String.valueOf(value), true);
-
-        values.put(columnName, record);
     }
 
     /**

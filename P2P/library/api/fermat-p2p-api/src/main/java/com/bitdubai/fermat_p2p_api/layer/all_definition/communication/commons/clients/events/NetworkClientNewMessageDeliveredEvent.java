@@ -1,3 +1,9 @@
+/*
+* @#NetworkClientNewMessageDeliveredEvent.java - 2016
+* Copyright bitDubai.com., All rights reserved.
+ * You may not modify, use, reproduce or distribute this software.
+* BITDUBAI/CONFIDENTIAL
+*/
 package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.events;
 
 import com.bitdubai.fermat_api.layer.all_definition.events.common.AbstractEvent;
@@ -14,16 +20,10 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.P2pE
  */
 public class NetworkClientNewMessageDeliveredEvent extends AbstractEvent<P2pEventType> {
 
-    public enum STATUS{
-        SUCCESS,
-        FAILED
-    }
-
     /**
      * Represent the content value
      */
     private String id;
-    private STATUS status;
 
     /**
      * Represent the networkServiceTypeSource value
@@ -55,19 +55,10 @@ public class NetworkClientNewMessageDeliveredEvent extends AbstractEvent<P2pEven
         this.networkServiceTypeSource = networkServiceTypeSource;
     }
 
-    public STATUS getStatus() {
-        return status;
-    }
-
-    public void setStatus(STATUS status) {
-        this.status = status;
-    }
-
     @Override
     public String toString() {
-        return "NetworkClientNewMessageDeliveredEvent{" +
+        return "NetworkClientNewMessageTransmitEvent{" +
                 "id='" + id + '\'' +
-                ", status=" + status +
                 ", networkServiceTypeSource=" + networkServiceTypeSource +
                 '}';
     }

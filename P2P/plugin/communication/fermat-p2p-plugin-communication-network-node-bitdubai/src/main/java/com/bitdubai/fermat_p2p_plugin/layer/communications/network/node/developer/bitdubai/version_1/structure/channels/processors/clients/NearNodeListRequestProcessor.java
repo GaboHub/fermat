@@ -10,7 +10,11 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.Head
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.PackageType;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.endpoinsts.FermatWebSocketChannelEndpoint;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.PackageProcessor;
-import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.NodesCatalog;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.context.NodeContext;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.context.NodeContextItem;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.jpa.daos.JPADaoFactory;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.jpa.entities.NodeCatalog;
+
 
 import org.apache.commons.lang.ClassUtils;
 import org.jboss.logging.Logger;
@@ -37,6 +41,11 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
      * Represent the LOG
      */
     private final Logger LOG = Logger.getLogger(ClassUtils.getShortClassName(NearNodeListRequestProcessor.class));
+
+    /**
+     * Represents the JPADaoFactory.
+     */
+    private JPADaoFactory jpaDaoFactory;
 
     /**
      * Constructor
@@ -73,25 +82,25 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
             /*
              * Get the node catalog list
              */
-            List<NodesCatalog> nodesCatalogs = getDaoFactory().getNodesCatalogDao().findAll();
+            List<NodeCatalog> nodesCatalogs = getJPADaoFactory().getNodeCatalogDao().list();
 
             /*
              * Filter and order
              */
-            List<NodesCatalog> nodesCatalogsFiltered = applyGeoLocationFilter(clientLocation, nodesCatalogs);
+            List<NodeCatalog> nodesCatalogsFiltered = applyGeoLocationFilter(clientLocation, nodesCatalogs);
 
             /*
              * Create a node list
              */
             List<NodeProfile> nodesProfileList = new ArrayList<>();
-            for (final NodesCatalog node: nodesCatalogsFiltered.subList(0,50)) {
+            for (final NodeCatalog node: nodesCatalogsFiltered.subList(0,50)) {
 
                 NodeProfile nodeProfile = new NodeProfile();
-                nodeProfile.setIdentityPublicKey(node.getIdentityPublicKey());
+                nodeProfile.setIdentityPublicKey(node.getId());
                 nodeProfile.setName(node.getName());
                 nodeProfile.setDefaultPort(node.getDefaultPort());
                 nodeProfile.setIp(node.getIp());
-                nodeProfile.setLocation(node.getLastLocation());
+                nodeProfile.setLocation(node.getLocation());
 
                 nodesProfileList.add(nodeProfile);
             }
@@ -129,28 +138,28 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
      * @param nodesCatalogs
      * @return List<NodesCatalog>
      */
-    private List<NodesCatalog> applyGeoLocationFilter(Location clientLocation, List<NodesCatalog> nodesCatalogs) {
+    private List<NodeCatalog> applyGeoLocationFilter(Location clientLocation, List<NodeCatalog> nodesCatalogs) {
 
         /*
          * Hold the data ordered by distance
          */
-        Map<Double, NodesCatalog> orderedByDistance = new TreeMap<>();
+        Map<Double, NodeCatalog> orderedByDistance = new TreeMap<>();
 
         /*
          * For each node
          */
-        for (final NodesCatalog node: nodesCatalogs) {
+        for (final NodeCatalog node: nodesCatalogs) {
 
             /*
              * If component have a geo location
              */
-            if (node.getLastLocation().getLatitude() != 0 &&
-                    node.getLastLocation().getLongitude() != 0){
+            if (node.getLocation().getLatitude() != 0 &&
+                    node.getLocation().getLongitude() != 0){
 
                 /*
                  * Calculate the distance between the two points
                  */
-                Double componentDistance = DistanceCalculator.distance(clientLocation, node.getLastLocation(), DistanceCalculator.KILOMETERS);
+                Double componentDistance = DistanceCalculator.distance(clientLocation, node.getLocation(), DistanceCalculator.KILOMETERS);
 
                 /*
                  * Add to the list
@@ -162,5 +171,12 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
         }
 
         return new ArrayList<>(orderedByDistance.values());
+    }
+
+    private JPADaoFactory getJPADaoFactory(){
+        if (jpaDaoFactory == null)
+            jpaDaoFactory = JPADaoFactory.getInstance();
+
+        return jpaDaoFactory;
     }
 }

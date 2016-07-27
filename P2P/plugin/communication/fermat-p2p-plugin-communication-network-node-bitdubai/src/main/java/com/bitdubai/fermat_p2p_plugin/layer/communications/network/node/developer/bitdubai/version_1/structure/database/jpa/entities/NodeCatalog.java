@@ -11,7 +11,6 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.develope
 
 import java.sql.Timestamp;
 
-import javax.jdo.annotations.Inheritance;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.CascadeType;
@@ -31,8 +30,6 @@ import javax.persistence.OneToOne;
  * @since Java JDK 1.7
  */
 @Entity
-@Inheritance
-@Access(AccessType.PROPERTY)
 public class NodeCatalog extends AbstractBaseEntity<String>{
 
     /**

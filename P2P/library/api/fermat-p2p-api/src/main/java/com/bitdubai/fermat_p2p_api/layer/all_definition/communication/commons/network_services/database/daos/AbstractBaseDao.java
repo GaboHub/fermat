@@ -55,14 +55,6 @@ public abstract class AbstractBaseDao<T extends AbstractBaseEntity> {
         this.tableIdName = tableIdName;
     }
 
-    public String getTableName() {
-        return tableName;
-    }
-
-    public String getTableIdName() {
-        return tableIdName;
-    }
-
     /**
      * Return the data base instance
      * @return Database
@@ -225,6 +217,53 @@ public abstract class AbstractBaseDao<T extends AbstractBaseEntity> {
 
             // load the data base to memory with filters
             table.setFilterGroup(tableFilters, null, DatabaseFilterOperator.OR);
+            table.loadToMemory();
+
+            final List<DatabaseTableRecord> records = table.getRecords();
+
+            final List<T> list = new ArrayList<>();
+
+            // Convert into entity objects and add to the list.
+            for (DatabaseTableRecord record : records)
+                list.add(getEntityFromDatabaseTableRecord(record));
+
+            return list;
+
+        } catch (final CantLoadTableToMemoryException e) {
+
+            throw new CantReadRecordDataBaseException(e, "Table Name: " + tableName, "The data no exist");
+        } catch (final InvalidParameterException e) {
+
+            throw new CantReadRecordDataBaseException(e, "Table Name: " + tableName, "Invalid parameter found, maybe the enum is wrong.");
+        }
+    }
+
+
+    public final List<T> findAllPendingToSendByPublicKey(final Map<String, Object> filters) throws CantReadRecordDataBaseException {
+
+        if (filters == null || filters.isEmpty())
+            throw new IllegalArgumentException("The filters are required, can not be null or empty.");
+
+        try {
+
+            // Prepare the filters
+            final DatabaseTable table = getDatabaseTable();
+
+            final List<DatabaseTableFilter> tableFilters = new ArrayList<>();
+
+            for (String key : filters.keySet()) {
+
+                DatabaseTableFilter newFilter = table.getEmptyTableFilter();
+                newFilter.setType(DatabaseFilterType.EQUAL);
+                newFilter.setColumn(key);
+                newFilter.setValue((String) filters.get(key));
+
+                tableFilters.add(newFilter);
+            }
+
+
+            // load the data base to memory with filters
+            table.setFilterGroup(tableFilters, null, DatabaseFilterOperator.AND);
             table.loadToMemory();
 
             final List<DatabaseTableRecord> records = table.getRecords();

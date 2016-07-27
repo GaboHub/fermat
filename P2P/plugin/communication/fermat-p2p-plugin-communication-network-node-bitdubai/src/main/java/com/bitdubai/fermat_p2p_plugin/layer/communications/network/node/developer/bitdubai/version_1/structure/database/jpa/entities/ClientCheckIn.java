@@ -173,7 +173,7 @@ public class ClientCheckIn extends AbstractBaseEntity<String>{
     public String toString() {
         final StringBuilder sb = new StringBuilder("ClientCheckIn{");
         sb.append("id='").append(id).append('\'');
-        sb.append(", client=").append(client);
+        sb.append(", client=").append((client != null ? client.getId() : null));
         sb.append(", timestamp=").append(timestamp);
         sb.append('}');
         return sb.toString();

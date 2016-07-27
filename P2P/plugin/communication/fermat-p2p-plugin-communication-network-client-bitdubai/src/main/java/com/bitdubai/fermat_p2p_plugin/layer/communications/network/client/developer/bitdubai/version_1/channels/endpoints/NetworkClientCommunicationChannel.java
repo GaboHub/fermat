@@ -22,7 +22,7 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.develo
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.CheckOutClientRespondProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.CheckOutNetworkServiceRespondProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.MessageTransmitProcessor;
-import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.MessageTransmitResponseProcessor;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.MessageTransmitRespondProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.NearNodeListRespondProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.PackageProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.processors.ServerHandshakeRespondProcessor;
@@ -121,7 +121,7 @@ public class NetworkClientCommunicationChannel {
         registerMessageProcessor(new CheckOutClientRespondProcessor(this));
         registerMessageProcessor(new CheckOutNetworkServiceRespondProcessor(this));
         registerMessageProcessor(new MessageTransmitProcessor(this));
-        registerMessageProcessor(new MessageTransmitResponseProcessor(this));
+        registerMessageProcessor(new MessageTransmitRespondProcessor(this));
         registerMessageProcessor(new NearNodeListRespondProcessor(this));
         registerMessageProcessor(new ServerHandshakeRespondProcessor(this));
         registerMessageProcessor(new UpdateActorProfileRespondProcessor(this));

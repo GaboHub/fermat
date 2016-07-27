@@ -16,6 +16,5 @@ dependencies {
     compile project(':fermat-osa-addon-linux-database-system-bitdubai')
     compile project(':fermat-osa-addon-linux-device-location-bitdubai')
     compile project(':fermat-osa-addon-linux-file-system-bitdubai')
-    compile project(':fermat-osa-addon-linux-device-connectivity')
 
 }

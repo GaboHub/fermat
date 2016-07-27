@@ -202,7 +202,7 @@ public class ActorCheckIn extends AbstractBaseEntity<Long>{
     public String toString() {
         final StringBuilder sb = new StringBuilder("ActorCheckIn{");
         sb.append("id='").append(id).append('\'');
-        sb.append(", actor=").append(actor);
+        sb.append(", actor=").append((actor != null ? actor.getId() : null));
         sb.append(", timestamp=").append(timestamp);
         sb.append('}');
         return sb.toString();

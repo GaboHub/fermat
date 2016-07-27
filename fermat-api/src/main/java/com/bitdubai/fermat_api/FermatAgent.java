@@ -36,16 +36,4 @@ public abstract class FermatAgent {
         return status == AgentStatus.STARTED;
     }
 
-    public boolean isStarted(){
-        return status == AgentStatus.STARTED;
-    }
-
-    public boolean isStopped(){
-        return status == AgentStatus.STOPPED;
-    }
-
-    public boolean isPaused(){
-        return status == AgentStatus.PAUSED;
-    }
-
 }

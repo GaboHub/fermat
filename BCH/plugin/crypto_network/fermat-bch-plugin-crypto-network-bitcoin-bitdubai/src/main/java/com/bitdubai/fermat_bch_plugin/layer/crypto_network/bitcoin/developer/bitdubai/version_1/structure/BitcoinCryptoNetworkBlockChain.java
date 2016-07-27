@@ -90,13 +90,6 @@ public class BitcoinCryptoNetworkBlockChain extends DownloadProgressTracker impl
     }
 
     /**
-     * deletes the blockchain
-     */
-    public void deleteBlockchain(){
-        File blockChainFile = new File(BLOCKCHAIN_PATH, BLOCKCHAIN_FILENAME);
-        blockChainFile.delete();
-    }
-    /**
      * Initializes the blockchain and blockstore objects.
      * @throws BlockStoreException if something went wrong and I can't create the blockchain
      */

@@ -610,7 +610,7 @@ public class ActorCatalog extends AbstractBaseEntity<String>{
     public String toString() {
         final StringBuilder sb = new StringBuilder("ActorCatalog{");
         sb.append("id='").append(id).append('\'');
-        sb.append(", location=").append(location);
+        sb.append(", location=").append((location != null ? location.getId() : null));
         sb.append(", status=").append(status);
         sb.append(", actorType='").append(actorType).append('\'');
         sb.append(", alias='").append(alias).append('\'');
@@ -621,10 +621,10 @@ public class ActorCatalog extends AbstractBaseEntity<String>{
         sb.append(", lastUpdateTime=").append(lastUpdateTime);
         sb.append(", lastConnection=").append(lastConnection);
         sb.append(", thumbnail=").append(Arrays.toString(thumbnail));
-        sb.append(", homeNode=").append(homeNode);
-        sb.append(", session=").append(session);
-        sb.append(", networkService=").append(networkService);
-        sb.append(", client=").append(client);
+        sb.append(", homeNode=").append((homeNode != null ? homeNode.getId() : null));
+        sb.append(", session=").append((session != null ? session.getId() : null));
+        sb.append(", networkService=").append((networkService != null ? networkService.getId() : null));
+        sb.append(", client=").append((client != null ? client.getId() : null));
         sb.append(", signature='").append(signature).append('\'');
         sb.append('}');
         return sb.toString();

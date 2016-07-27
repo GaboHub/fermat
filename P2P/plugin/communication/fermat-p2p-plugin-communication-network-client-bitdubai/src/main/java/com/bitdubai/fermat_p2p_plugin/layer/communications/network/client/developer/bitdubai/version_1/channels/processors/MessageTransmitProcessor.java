@@ -4,10 +4,10 @@ import com.bitdubai.fermat_api.layer.all_definition.events.EventSource;
 import com.bitdubai.fermat_api.layer.all_definition.events.interfaces.FermatEvent;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.events.NetworkClientNewMessageTransmitEvent;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.Package;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.P2pEventType;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.PackageType;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.channels.endpoints.NetworkClientCommunicationChannel;
+import com.google.gson.Gson;
 
 import javax.websocket.Session;
 
@@ -33,11 +33,12 @@ public class MessageTransmitProcessor extends PackageProcessor {
         );
     }
 
+
     @Override
     public void processingPackage(Session session, Package packageReceived) {
 
         System.out.println("Processing new package received, packageType: "+packageReceived.getPackageType());
-        System.out.println(packageReceived.getContent());
+        System.out.println(new Gson().toJson(packageReceived));
 
         try {
 
@@ -47,9 +48,7 @@ public class MessageTransmitProcessor extends PackageProcessor {
             FermatEvent event = getEventManager().getNewEvent(P2pEventType.NETWORK_CLIENT_NEW_MESSAGE_TRANSMIT);
             event.setSource(EventSource.NETWORK_CLIENT);
 
-            NetworkServiceMessage networkServiceMessage = NetworkServiceMessage.parseContent(packageReceived.getContent());
-
-            ((NetworkClientNewMessageTransmitEvent) event).setContent(networkServiceMessage);
+            ((NetworkClientNewMessageTransmitEvent) event).setContent(packageReceived.getContent());
             ((NetworkClientNewMessageTransmitEvent) event).setNetworkServiceTypeSource(packageReceived.getNetworkServiceTypeSource());
 
             /*

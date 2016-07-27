@@ -301,11 +301,11 @@ public class GeoLocation extends AbstractBaseEntity<Long> implements Location {
     public String toString() {
         final StringBuilder sb = new StringBuilder("GeoLocation{");
         sb.append("id=").append(id);
-        sb.append(", latitude=").append(latitude);
-        sb.append(", longitude=").append(longitude);
-        sb.append(", altitude=").append(altitude);
-        sb.append(", accuracy=").append(accuracy);
-        sb.append(", altitudeAccuracy=").append(altitudeAccuracy);
+        sb.append(", latitude=").append((latitude != null ? latitude.doubleValue() : null));
+        sb.append(", longitude=").append((longitude != null ? longitude.doubleValue() : null));
+        sb.append(", altitude=").append((altitude != null ? altitude.doubleValue() : null));
+        sb.append(", accuracy=").append((accuracy != null ? accuracy.doubleValue() : null));
+        sb.append(", altitudeAccuracy=").append((altitudeAccuracy != null ? altitudeAccuracy.doubleValue() : null));
         sb.append(", time=").append(time);
         sb.append(", source=").append(source);
         sb.append('}');

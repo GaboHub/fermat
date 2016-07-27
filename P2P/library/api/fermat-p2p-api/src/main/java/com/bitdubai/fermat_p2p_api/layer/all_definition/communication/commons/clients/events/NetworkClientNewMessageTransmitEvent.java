@@ -2,7 +2,6 @@ package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.c
 
 import com.bitdubai.fermat_api.layer.all_definition.events.common.AbstractEvent;
 import com.bitdubai.fermat_api.layer.all_definition.network_service.enums.NetworkServiceType;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.P2pEventType;
 
 /**
@@ -22,7 +21,7 @@ public class NetworkClientNewMessageTransmitEvent extends AbstractEvent<P2pEvent
     /**
      * Represent the content value
      */
-    private NetworkServiceMessage content;
+    private String content;
 
     /**
      * Represent the networkServiceTypeSource value
@@ -38,11 +37,11 @@ public class NetworkClientNewMessageTransmitEvent extends AbstractEvent<P2pEvent
         super(p2pEventType);
     }
 
-    public NetworkServiceMessage getContent() {
+    public String getContent() {
         return content;
     }
 
-    public void setContent(NetworkServiceMessage content) {
+    public void setContent(String content) {
         this.content = content;
     }
 

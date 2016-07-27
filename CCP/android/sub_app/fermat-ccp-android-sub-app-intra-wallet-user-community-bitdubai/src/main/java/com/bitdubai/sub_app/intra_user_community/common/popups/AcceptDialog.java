@@ -42,9 +42,6 @@ public class AcceptDialog extends FermatDialog<ReferenceAppFermatSession<IntraUs
     private FermatButton   positiveBtn;
     private FermatButton   negativeBtn;
 
-    private FermatTextView textConnectionSuccess;
-    private boolean result = false;
-
     public AcceptDialog(final Activity                       activity              ,
                         final ReferenceAppFermatSession intraUserSubAppSession,
                         final SubAppResourcesProviderManager subAppResources       ,
@@ -72,16 +69,15 @@ public class AcceptDialog extends FermatDialog<ReferenceAppFermatSession<IntraUs
         positiveBtn.setOnClickListener(this);
         negativeBtn.setOnClickListener(this);
 
-        title.setText("CONNECTION REQUEST");
-        description.setText("New Connection");
-        userName.setText(intraUserInformation.getName()+" wants to connect with you");
-
+        title.setText("Connect");
+        description.setText("Do you want to accept");
+        userName.setText(intraUserInformation.getName());
 
     }
 
     @Override
     protected int setLayoutId() {
-        return R.layout.ccp_comm_dialog_builder;
+        return R.layout.dialog_builder;
     }
 
     @Override
@@ -99,9 +95,8 @@ public class AcceptDialog extends FermatDialog<ReferenceAppFermatSession<IntraUs
             try {
                 if (intraUserInformation != null && identity != null) {
                     getSession().getModuleManager().acceptIntraUser(identity.getPublicKey(), intraUserInformation.getName(), intraUserInformation.getPublicKey(), intraUserInformation.getProfileImage());
-                    getSession().setData(SessionConstants.NOTIFICATION_ACCEPTED, Boolean.TRUE);
-                    //Toast.makeText(getContext(), intraUserInformation.getName() + " Accepted connection request", Toast.LENGTH_SHORT).show();
-                    result = true;
+                    getSession().setData(SessionConstants.NOTIFICATION_ACCEPTED,Boolean.TRUE);
+                    Toast.makeText(getContext(), intraUserInformation.getName() + " Accepted connection request", Toast.LENGTH_SHORT).show();
                 } else {
                     super.toastDefaultError();
                 }
@@ -127,11 +122,6 @@ public class AcceptDialog extends FermatDialog<ReferenceAppFermatSession<IntraUs
                 super.toastDefaultError();
             }
             dismiss();
-
         }
-    }
-
-    public boolean getResultado(){
-        return result;
     }
 }

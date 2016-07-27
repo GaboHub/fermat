@@ -1,16 +1,13 @@
 package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.structure;
 
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.DiscoveryQueryParameters;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.abstract_classes.AbstractNetworkService;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.daos.IncomingMessagesDao;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.daos.OutgoingMessagesDao;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ActorProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.NetworkServiceProfile;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.Profile;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.commons.exceptions.CantEstablishConnectionException;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The Class <code>com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.structure.NetworkServiceConnectionManager</code>
@@ -28,60 +25,58 @@ public final class NetworkServiceConnectionManager {
     private IncomingMessagesDao incomingMessagesDao;
     private OutgoingMessagesDao outgoingMessagesDao;
 
-    private Map<String, Profile> poolConnectionsWaitingForResponse;
-
     public NetworkServiceConnectionManager(final AbstractNetworkService networkServiceRoot) {
 
         this.networkServiceRoot = networkServiceRoot;
 
         this.incomingMessagesDao = new IncomingMessagesDao(networkServiceRoot.getDataBase());
         this.outgoingMessagesDao = new OutgoingMessagesDao(networkServiceRoot.getDataBase());
-
-        this.poolConnectionsWaitingForResponse = new ConcurrentHashMap<>();
     }
 
     public void connectTo(NetworkServiceProfile remoteNetworkService) {
 
-        if (!poolConnectionsWaitingForResponse.containsKey(remoteNetworkService.getIdentityPublicKey())) {
+        try {
 
-            // TODO CALL NETWORK SERVICE
+            /*
+             * ask to the communicationLayerManager to connect to other network service
+             */
+            DiscoveryQueryParameters discoveryQueryParameters = new DiscoveryQueryParameters(
+                    null, // actorType
+                    null, // alias
+                    null, // distance
+                    null, // extraData
+                    remoteNetworkService.getIdentityPublicKey(), // IdentityPublicKey
+                    null, // location
+                    0, // max
+                    null, // name
+                    remoteNetworkService.getNetworkServiceType(), // this is filter in the Node if was a NetworkService or an Actor who realized the request discovery
+                    0, // offset
+                    networkServiceRoot.getProfile().getNetworkServiceType() // this is the NetworkService Intermediate who handle the request
+            );
+
+            networkServiceRoot.getConnection().actorTraceDiscoveryQuery(discoveryQueryParameters);
+
+        } catch (Exception e) {
+            networkServiceRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    e
+            );
         }
 
     }
 
-    public void connectTo(ActorProfile remoteActor) throws CantEstablishConnectionException {
+    public void connectTo(ActorProfile applicantNetworkService) throws CantEstablishConnectionException {
 
-        if (!poolConnectionsWaitingForResponse.containsKey(remoteActor.getIdentityPublicKey())) {
+        try {
 
-            try {
+            networkServiceRoot.getConnection().callActor(networkServiceRoot.getProfile(), applicantNetworkService);
 
-                networkServiceRoot.getConnection().callActor(networkServiceRoot.getProfile(), remoteActor);
-
-                poolConnectionsWaitingForResponse.put(remoteActor.getIdentityPublicKey(), remoteActor);
-
-            } catch (Exception e) {
-                networkServiceRoot.reportError(
-                        UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
-                        e
-                );
-            }
+        } catch (Exception e) {
+            networkServiceRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    e
+            );
         }
-    }
-
-    /**
-     * Notify to the agent that remove a specific connection
-     *
-     * @param identityPublicKey
-     */
-    public void removeConnectionWaitingForResponse(String identityPublicKey){
-        this.poolConnectionsWaitingForResponse.remove(identityPublicKey);
-    }
-
-    /**
-     * Notify to the agent that remove all connection
-     */
-    public void removeAllConnectionWaitingForResponse(){
-        this.poolConnectionsWaitingForResponse.clear();
     }
 
     /**
@@ -100,4 +95,11 @@ public final class NetworkServiceConnectionManager {
         return incomingMessagesDao;
     }
 
+    /**
+     * Get the NetworkServiceRoot
+     * @return AbstractNetworkServiceBase
+     */
+    public AbstractNetworkService getNetworkServiceRoot() {
+        return networkServiceRoot;
+    }
 }
