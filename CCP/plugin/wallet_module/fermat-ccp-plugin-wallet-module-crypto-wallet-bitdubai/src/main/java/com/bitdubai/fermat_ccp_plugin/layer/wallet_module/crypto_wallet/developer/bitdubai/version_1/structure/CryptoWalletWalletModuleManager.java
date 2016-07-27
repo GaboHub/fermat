@@ -872,7 +872,7 @@ public class CryptoWalletWalletModuleManager extends ModuleManagerImpl<BitcoinWa
 
     public void testNetGiveMeCoins(BlockchainNetworkType blockchainNetworkType, CryptoAddress cryptoAddress) throws CantGetCoinsFromFaucetException{
 
-            BitcoinFaucetManager.giveMeCoins(blockchainNetworkType,cryptoAddress , 100000000);
+            BitcoinFaucetManager.giveMeCoins(blockchainNetworkType,cryptoAddress , 500000000);
 
     }
 
@@ -1586,7 +1586,7 @@ public class CryptoWalletWalletModuleManager extends ModuleManagerImpl<BitcoinWa
 
     private  String convertTime(long time){
         Date date = new Date(time);
-        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.US);
+        SimpleDateFormat sdf = new SimpleDateFormat("MMMM dd, yyyy HH:mm", Locale.US);
 
         return sdf.format(date);
     }

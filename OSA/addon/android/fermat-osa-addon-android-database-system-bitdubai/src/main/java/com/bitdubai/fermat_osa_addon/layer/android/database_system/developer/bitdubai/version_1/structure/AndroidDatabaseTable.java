@@ -26,7 +26,6 @@ import com.bitdubai.fermat_api.layer.osa_android.location_system.Location;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 
@@ -43,11 +42,6 @@ import java.util.UUID;
  */
 
 public class AndroidDatabaseTable implements DatabaseTable {
-
-    @Override
-    public void setTableFilterToJoin(Map<String, String> tableFilterToJoin) {
-
-    }
 
     @Override
     public String getSqlQuery() {

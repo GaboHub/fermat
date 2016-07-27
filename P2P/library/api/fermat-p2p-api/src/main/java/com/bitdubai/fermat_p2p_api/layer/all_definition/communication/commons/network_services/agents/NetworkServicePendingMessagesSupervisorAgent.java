@@ -3,14 +3,14 @@ package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.n
 import com.bitdubai.fermat_api.CantStartAgentException;
 import com.bitdubai.fermat_api.CantStopAgentException;
 import com.bitdubai.fermat_api.FermatAgent;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
+import com.bitdubai.fermat_api.FermatException;
 import com.bitdubai.fermat_api.layer.all_definition.enums.AgentStatus;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.interfaces.NetworkClientConnection;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.abstract_classes.AbstractNetworkService;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.constants.NetworkServiceDatabaseConstants;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ActorProfile;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.NetworkServiceProfile;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.Profile;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.network_services.data_base.CommunicationNetworkServiceDatabaseConstants;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.MessagesStatus;
 
 import java.util.ArrayList;
@@ -38,6 +38,7 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
     private AbstractNetworkService networkServiceRoot;
     private ScheduledExecutorService scheduledThreadPool;
     private List<ScheduledFuture> scheduledFutures;
+    private Map<String, Profile> poolConnectionsWaitingForResponse;
 
     /**
      * Constructor with parameter
@@ -47,8 +48,11 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
     public NetworkServicePendingMessagesSupervisorAgent(final AbstractNetworkService networkServiceRoot){
 
         super();
-        this.networkServiceRoot = networkServiceRoot;
-        this.status             = AgentStatus.CREATED;
+        this.networkServiceRoot                = networkServiceRoot;
+        this.status                            = AgentStatus.CREATED;
+        this.poolConnectionsWaitingForResponse = new HashMap<>();
+        this.scheduledThreadPool               = Executors.newScheduledThreadPool(5);
+        this.scheduledFutures                  = new ArrayList<>();
     }
 
     /**
@@ -62,7 +66,7 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
              * Read all pending message from database
              */
             Map<String, Object> filters = new HashMap<>();
-            filters.put(NetworkServiceDatabaseConstants.INCOMING_MESSAGES_STATUS_COLUMN_NAME, MessagesStatus.NEW_RECEIVED.getCode());
+            filters.put(CommunicationNetworkServiceDatabaseConstants.INCOMING_MESSAGES_STATUS_COLUMN_NAME, MessagesStatus.NEW_RECEIVED.getCode());
             List<NetworkServiceMessage> messages = networkServiceRoot.getNetworkServiceConnectionManager().getIncomingMessagesDao().findAll(filters);
 
             if(messages != null) {
@@ -80,8 +84,8 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
             }
 
         }catch (Exception e){
-            System.out.println("NetworkServicePendingMessagesSupervisorAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingIncomingMessage detect a error: "+e.getMessage());
-            networkServiceRoot.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            System.out.println("CommunicationSupervisorPendingMessagesAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingIncomingMessage detect a error: "+e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -97,150 +101,143 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
             /*
              * Read all pending message from database
              */
-            Map<String, Boolean> receivers = networkServiceRoot.getNetworkServiceConnectionManager().getOutgoingMessagesDao().findByFailCount(countFail, countFailMax);
+            List<NetworkServiceMessage> messages = networkServiceRoot.getNetworkServiceConnectionManager().getOutgoingMessagesDao().findByFailCount(countFail, countFailMax);
 
             NetworkClientConnection networkClientConnection = networkServiceRoot.getConnection();
 
-            /*
-             * For all destination in the message request a new connection
-             */
-            for (Map.Entry<String, Boolean> receiver : receivers.entrySet()) {
+            System.out.println("12345** pending messages "+ messages.size());
 
-                    if (networkClientConnection.isConnected()) {
+            System.out.println("CommunicationSupervisorPendingMessagesAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingOutgoingMessage messages.size() = "+ (messages != null ? messages.size() : 0));
 
-                    if (receiver.getValue()) {
+            if(messages != null) {
+
+                /*
+                 * For all destination in the message request a new connection
+                 */
+                for (NetworkServiceMessage fermatMessage: messages) {
+
+                    if (!poolConnectionsWaitingForResponse.containsKey(fermatMessage.getReceiverPublicKey()) && networkClientConnection.isConnected()) {
+                        System.out.println("12345** YES, IT'S CONNECTED AND INSIDE THE AGENT");
+
                         ActorProfile remoteParticipant = new ActorProfile();
-                        remoteParticipant.setIdentityPublicKey(receiver.getKey());
+                        remoteParticipant.setIdentityPublicKey(fermatMessage.getReceiverPublicKey());
 
-                        networkServiceRoot.getNetworkServiceConnectionManager().connectTo(remoteParticipant);
-                    } else {
 
-                        NetworkServiceProfile remoteParticipant = new NetworkServiceProfile();
-                        remoteParticipant.setIdentityPublicKey(receiver.getKey());
+                        networkClientConnection.callActor(networkServiceRoot.getProfile(), remoteParticipant);
 
-                        networkServiceRoot.getNetworkServiceConnectionManager().connectTo(remoteParticipant);
+//                        poolConnectionsWaitingForResponse.put(fermatMessage.getReceiverPublicKey(), remoteParticipant);
+
                     }
                 }
+
             }
 
         } catch (Exception e) {
-            System.out.println("NetworkServicePendingMessagesSupervisorAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingOutgoingMessage detect a error: "+e.getMessage());
-            networkServiceRoot.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
+            System.out.println("CommunicationSupervisorPendingMessagesAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingOutgoingMessage detect a error: "+e.getMessage());
+            e.printStackTrace();
         }
 
     }
 
+    /**
+     * (non-javadoc)
+     * @see FermatAgent#start()
+     */
     @Override
-    public synchronized void start() throws CantStartAgentException {
+    public void start() throws CantStartAgentException {
 
         try {
 
-            if(this.isStarted())
-                return;
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4),     1,  1, TimeUnit.MINUTES));
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),    10, 10, TimeUnit.MINUTES));
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 1,  1, TimeUnit.HOURS));
 
-            if(this.isPaused()) {
-                this.resume();
-                return;
+            this.status = AgentStatus.STARTED;
+
+        } catch (Exception exception) {
+            throw new CantStartAgentException(FermatException.wrapException(exception), null, "You should inspect the cause.");
+        }
+    }
+
+    /**
+     * (non-javadoc)
+     * @see FermatAgent#resume()
+     */
+    public void resume() throws CantStartAgentException {
+        try {
+            try {
+
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),        30, 30, TimeUnit.SECONDS));
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4),     1,  1, TimeUnit.MINUTES));
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),    10, 10, TimeUnit.MINUTES));
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 1,  1, TimeUnit.HOURS));
+
+                this.status = AgentStatus.STARTED;
+
+            } catch (Exception exception) {
+                throw new CantStartAgentException(FermatException.wrapException(exception), null, "You should inspect the cause.");
             }
 
-            this.scheduledThreadPool   = Executors.newScheduledThreadPool(5);
-            this.scheduledFutures      = new ArrayList<>();
-
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),         10,    30, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(),         10,    30, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4),     10,    60, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),     10,   600, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 10, 3600, TimeUnit.SECONDS));
-
-            this.status = AgentStatus.STARTED;
-
-        } catch (CantStartAgentException exception) {
-
-            throw exception;
         } catch (Exception exception) {
 
-            throw new CantStartAgentException(exception, null, "You should inspect the cause.");
+            throw new CantStartAgentException(FermatException.wrapException(exception), null, "You should inspect the cause.");
         }
     }
 
-    public synchronized void resume() throws CantStartAgentException {
-
+    /**
+     * (non-javadoc)
+     * @see FermatAgent#pause()
+     */
+    public void pause() throws CantStopAgentException {
         try {
-
-            if(this.isStarted())
-                return;
-
-            if(this.isStopped())
-                throw new CantStartAgentException("The agent is stopped, can't resume it, you should start it.");
-
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),         10,    30, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(), 10, 30, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4), 10, 60, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),     10,   600, TimeUnit.SECONDS));
-            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 10,  3600, TimeUnit.SECONDS));
-
-            this.status = AgentStatus.STARTED;
-
-        } catch (CantStartAgentException exception) {
-
-            throw exception;
-        } catch (Exception exception) {
-
-            throw new CantStartAgentException(exception, null, "You should inspect the cause.");
-        }
-    }
-
-    public synchronized void pause() throws CantStopAgentException {
-
-        try {
-
-            if (isPaused())
-                return;
-
-            if(!this.isStarted())
-                throw new CantStopAgentException("The agent is not running and it cannot be paused. Current status: "+this.getStatus());
 
             for (ScheduledFuture future: scheduledFutures) {
                 future.cancel(Boolean.TRUE);
-                scheduledFutures.remove(future);
             }
 
             this.status = AgentStatus.PAUSED;
 
-        } catch (CantStopAgentException exception) {
-
-            throw exception;
         } catch (Exception exception) {
 
-            throw new CantStopAgentException(exception, null, "You should inspect the cause.");
+            throw new CantStopAgentException(FermatException.wrapException(exception), null, "You should inspect the cause.");
         }
     }
 
-    public synchronized void stop() throws CantStopAgentException {
-
+    /**
+     * (non-javadoc)
+     * @see FermatAgent#stop()
+     */
+    public void stop() throws CantStopAgentException {
         try {
 
-            if (isStopped())
-                return;
-
-            if(!this.isStarted() && !this.isPaused())
-                throw new CantStartAgentException("The agent is not running, it cannot be stopped.");
-
-            for (ScheduledFuture future: scheduledFutures) {
-                future.cancel(Boolean.TRUE);
-                scheduledFutures.remove(future);
-            }
-
             scheduledThreadPool.shutdown();
-            scheduledFutures    = null;
-            scheduledThreadPool = null;
-            this.status = AgentStatus.STOPPED;
+            this.status = AgentStatus.PAUSED;
 
         } catch (Exception exception) {
 
-            throw new CantStopAgentException(exception, null, "You should inspect the cause.");
+            throw new CantStopAgentException(FermatException.wrapException(exception), null, "You should inspect the cause.");
         }
     }
+
+    /**
+     * Notify to the agent that remove a specific connection
+     *
+     * @param identityPublicKey
+     */
+    public void removeConnectionWaitingForResponse(String identityPublicKey){
+        this.poolConnectionsWaitingForResponse.remove(identityPublicKey);
+    }
+
+    /**
+     * Notify to the agent that remove all connection
+     */
+    public void removeAllConnectionWaitingForResponse(){
+        this.poolConnectionsWaitingForResponse.clear();
+    }
+
 
     private class PendingIncomingMessageProcessorTask implements Runnable {
 

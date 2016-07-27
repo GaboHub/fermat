@@ -18,7 +18,6 @@ import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantCrea
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.FileNotFoundException;
 
 import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.exceptions.CantGetImportedAddressesException;
-import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.exceptions.NetworkMonitorIsNotRunningException;
 import com.bitdubai.fermat_bch_plugin.layer.crypto_network.bitcoin.developer.bitdubai.version_1.util.BitcoinTransactionConverter;
 import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.exceptions.CantMonitorCryptoNetworkException;
 import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.exceptions.CantStoreTransactionException;
@@ -104,9 +103,6 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
      * List of running agents per network
      */
     HashMap<BlockchainNetworkType, BitcoinCryptoNetworkMonitor> runningAgents;
-    private BitcoinCryptoNetworkMonitor regTestNetworkMonitor;
-    private BitcoinCryptoNetworkMonitor testNetNetworkMonitor;
-    private BitcoinCryptoNetworkMonitor mainNetNetworkMonitor;
 
     /**
      * Platform variables
@@ -246,7 +242,6 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
                 if (isWalletReset) {
                     System.out.println("***CryptoNetwork*** new keys added from " + cryptoVault.getCode() + " vault in " + blockchainNetworkType.getCode() + " network...");
 
-
                     BitcoinCryptoNetworkMonitor bitcoinCryptoNetworkMonitor = runningAgents.get(blockchainNetworkType);
                     bitcoinCryptoNetworkMonitor.stop();
                     runningAgents.remove(blockchainNetworkType);
@@ -256,24 +251,8 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
                      * once the agent is stopped, I will restart it with the new wallet and the reset option.
                      */
                     File walletFilename = new File(WALLET_PATH, blockchainNetworkType.getCode());
-
-                    switch (blockchainNetworkType){
-                        case REG_TEST:
-                            regTestNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                            bitcoinCryptoNetworkMonitor = regTestNetworkMonitor;
-                            runningAgents.put(blockchainNetworkType, regTestNetworkMonitor);
-                            break;
-                        case TEST_NET:
-                            testNetNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                            bitcoinCryptoNetworkMonitor = testNetNetworkMonitor;
-                            runningAgents.put(blockchainNetworkType, testNetNetworkMonitor);
-                            break;
-                        case PRODUCTION:
-                            mainNetNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                            bitcoinCryptoNetworkMonitor = mainNetNetworkMonitor;
-                            runningAgents.put(blockchainNetworkType, mainNetNetworkMonitor);
-                            break;
-                    }
+                    bitcoinCryptoNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);;
+                    runningAgents.put(blockchainNetworkType, bitcoinCryptoNetworkMonitor);
 
                     try {
                         bitcoinCryptoNetworkMonitor.start();
@@ -286,25 +265,8 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
                  * If the agent for the network is not running, I will start a new one.
                  */
                 File walletFilename = new File(WALLET_PATH, blockchainNetworkType.getCode());
-
-                BitcoinCryptoNetworkMonitor bitcoinCryptoNetworkMonitor = null;
-                switch (blockchainNetworkType){
-                    case REG_TEST:
-                        regTestNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                        bitcoinCryptoNetworkMonitor = regTestNetworkMonitor;
-                        runningAgents.put(blockchainNetworkType, regTestNetworkMonitor);
-                        break;
-                    case TEST_NET:
-                        testNetNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                        bitcoinCryptoNetworkMonitor = testNetNetworkMonitor;
-                        runningAgents.put(blockchainNetworkType, testNetNetworkMonitor);
-                        break;
-                    case PRODUCTION:
-                        mainNetNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
-                        bitcoinCryptoNetworkMonitor = mainNetNetworkMonitor;
-                        runningAgents.put(blockchainNetworkType, mainNetNetworkMonitor);
-                        break;
-                }
+                BitcoinCryptoNetworkMonitor bitcoinCryptoNetworkMonitor = new BitcoinCryptoNetworkMonitor(pluginId, wallet, isWalletReset, walletFilename, pluginFileSystem, errorManager, dao, eventManager, blockchainProvider);
+                runningAgents.put(blockchainNetworkType, bitcoinCryptoNetworkMonitor);
 
                 System.out.println("***CryptoNetwork*** starting new agent with " + keyList.size() + " keys for " + cryptoVault.getCode() + " vault...");
 
@@ -371,7 +333,7 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
      *
      * @return
      */
-    private synchronized Wallet getWallet(BlockchainNetworkType blockchainNetworkType, @Nullable List<ECKey> keyList) throws UnreadableWalletException {
+    private Wallet getWallet(BlockchainNetworkType blockchainNetworkType, @Nullable List<ECKey> keyList) throws UnreadableWalletException {
         Wallet wallet = null;
         File walletFile = new File(WALLET_PATH, blockchainNetworkType.getCode());
 
@@ -379,12 +341,7 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
 
         // if the wallet file exists, I will get it from the Network Monitor
         if (walletFile.exists()){
-            BitcoinCryptoNetworkMonitor monitor = null;
-            try {
-                monitor = getMonitor(blockchainNetworkType);
-            } catch (NetworkMonitorIsNotRunningException e) {
-                //if there was an error, I will continue and try to get the wallet from file.
-            }
+            BitcoinCryptoNetworkMonitor monitor = runningAgents.get(blockchainNetworkType);
 
             if (monitor != null)
                 wallet = monitor.getWallet();
@@ -566,14 +523,11 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
         }
 
         //make sure we did have the agent running for this network
-        BitcoinCryptoNetworkMonitor monitor = null;
-        try {
-            monitor = getMonitor(blockchainNetworkType);
-        } catch (NetworkMonitorIsNotRunningException e) {
-            throw new CantBroadcastTransactionException(CantBroadcastTransactionException.DEFAULT_MESSAGE, e, "Broadcasting transaction " + txHash, "monitor not enabled.");
-        }
-
-        monitor.broadcastTransaction(txHash);
+        BitcoinCryptoNetworkMonitor monitor = runningAgents.get(blockchainNetworkType);
+        if (monitor == null)
+            throw new CantBroadcastTransactionException(CantBroadcastTransactionException.DEFAULT_MESSAGE, null, "Monitor is not started for this network type, retry again.", "monitor reset?");
+        else
+            monitor.broadcastTransaction(txHash);
     }
 
 
@@ -626,13 +580,10 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
      */
     private Transaction getTransactionFromBlockChain(BlockchainNetworkType blockchainNetworkType, String parentTransactionHash, String transactionBlockHash) throws CantGetTransactionsException {
         //make sure the agent is running
-        BitcoinCryptoNetworkMonitor monitor = null;
-        try {
-            monitor = getMonitor(blockchainNetworkType);
-        } catch (NetworkMonitorIsNotRunningException e) {
-            throw new CantGetTransactionsException(CantGetTransactionsException.DEFAULT_MESSAGE, e, "Monitor not started for this network type " + blockchainNetworkType.toString(), "Network reset");
-        }
+        BitcoinCryptoNetworkMonitor monitor = runningAgents.get(blockchainNetworkType);
 
+        if (monitor == null)
+            throw new CantGetTransactionsException(CantGetTransactionsException.DEFAULT_MESSAGE, null, "Monitor not started for this network type" , "Network reset");
 
         /**
          * will get it from the specified agent monitoring the passed network.
@@ -743,11 +694,10 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
      */
     public synchronized void storeTransaction(BlockchainNetworkType blockchainNetworkType, Transaction tx, UUID transactionId, boolean commit) throws CantStoreTransactionException {
         BitcoinCryptoNetworkMonitor monitor = null;
-        try {
-            monitor  = getMonitor(blockchainNetworkType);
-        } catch (NetworkMonitorIsNotRunningException e) {
-            throw new CantStoreTransactionException(e, "Network Monitor not initialized for this blockchain network type." + blockchainNetworkType.toString() + " Retry later.", "monitor not started.");
-        }
+        monitor  = runningAgents.get(blockchainNetworkType);
+
+        if (monitor == null)
+            throw new CantStoreTransactionException(null, "Network Monitor not initialized for this blockchain network type. Retry later.", "monitor not started.");
 
         try {
             monitor.storeBitcoinTransaction(tx, transactionId, commit);
@@ -791,16 +741,14 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
         }
 
         // I will make sure the agent is started
-        BitcoinCryptoNetworkMonitor monitor = null;
-        try {
-            monitor = getMonitor(blockchainNetworkType);
-        } catch (NetworkMonitorIsNotRunningException e) {
-            throw new CantCancellBroadcastTransactionException(CantCancellBroadcastTransactionException.DEFAULT_MESSAGE, e, "Monitor not started for this network type." + blockchainNetworkType.toString(), "Monitor reset");
-        }
+        BitcoinCryptoNetworkMonitor monitor = runningAgents.get(blockchainNetworkType);
 
-        /**
-         * Will invalidate the transaction in the wallet
-        */
+        if (monitor == null)
+            throw new CantCancellBroadcastTransactionException(CantCancellBroadcastTransactionException.DEFAULT_MESSAGE, null, "Monitor not started for this network type." , "Monitor reset");
+
+                /**
+                 * Will invalidate the transaction in the wallet
+                */
         monitor.cancelBroadcast(txHash);
 
         /**
@@ -824,14 +772,12 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
      * @throws CantGetBlockchainConnectionStatusException
      */
     public BlockchainConnectionStatus getBlockchainConnectionStatus(BlockchainNetworkType blockchainNetworkType) throws CantGetBlockchainConnectionStatusException {
-        BitcoinCryptoNetworkMonitor monitor = null;
-        try {
-            monitor = getMonitor(blockchainNetworkType);
-        } catch (NetworkMonitorIsNotRunningException e) {
-            throw new CantGetBlockchainConnectionStatusException(CantGetBlockchainConnectionStatusException.DEFAULT_MESSAGE, e, "Monitor not started for this network type " + blockchainNetworkType.toString() + ". Retry later.", "monitor reset");
-        }
+        BitcoinCryptoNetworkMonitor monitor = runningAgents.get(blockchainNetworkType);
 
-        return monitor.getBlockchainConnectionStatus();
+        if (monitor == null)
+            throw new CantGetBlockchainConnectionStatusException(CantGetBlockchainConnectionStatusException.DEFAULT_MESSAGE, null, "Monitor not started for this network type. Retry later.", "monitor reset");
+        else
+            return monitor.getBlockchainConnectionStatus();
     }
 
     /**
@@ -1167,37 +1113,6 @@ public class BitcoinCryptoNetworkManager  implements TransactionProtocolManager 
             return cryptoAddressList;
         }
         return cryptoAddressList;
-    }
-
-    /**
-     * gets the network monitor if it is running.
-     * @param blockchainNetworkType
-     * @return
-     */
-    private synchronized BitcoinCryptoNetworkMonitor getMonitor(BlockchainNetworkType blockchainNetworkType) throws NetworkMonitorIsNotRunningException {
-        try {
-            if (!dao.isNetworkActive(blockchainNetworkType))
-                throw new NetworkMonitorIsNotRunningException(blockchainNetworkType.getCode(), "Network is not activated. Generate an address in the requested network to active.");
-        } catch (CantExecuteDatabaseOperationException e) {
-            //if I couldn't get it from the database, I will continue.
-        }
-
-        switch (blockchainNetworkType){
-            case REG_TEST:
-                if (regTestNetworkMonitor == null)
-                    throw new NetworkMonitorIsNotRunningException(blockchainNetworkType.getCode() + " agent is null." , "Possible being restarted");
-                return regTestNetworkMonitor;
-            case TEST_NET:
-                if (testNetNetworkMonitor == null)
-                    throw new NetworkMonitorIsNotRunningException(blockchainNetworkType.getCode() + " agent is null." , "Possible being restarted");
-                return testNetNetworkMonitor;
-            case PRODUCTION:
-                if (mainNetNetworkMonitor == null)
-                    throw new NetworkMonitorIsNotRunningException(blockchainNetworkType.getCode() + " agent is null." , "Possible being restarted");
-                return mainNetNetworkMonitor;
-            default:
-                throw new NetworkMonitorIsNotRunningException(blockchainNetworkType.getCode() + " is not a valid blockchain network code." , "Wrong network code.");
-        }
     }
 
 }

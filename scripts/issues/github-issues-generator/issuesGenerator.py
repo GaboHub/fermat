@@ -43,7 +43,7 @@
 #   1.2.0:	- Fixes the default repository user.
 #		- Add issues for Agents, Network Service, Network Service Messages and events.
 #		- Add the labels list (only for team leaders use).
-#   		- Add the variable layerRoot.
+#   		- Add the variable networkService.
 #   1.2.4:	- Fix a bug in Agent and events issues generation.
 #   1.2.8:      - Fix a bug described in https://github.com/bitDubai/fermat/issues/4285
 #   1.2.16	- Included the variable isModule to avoid generate database issues

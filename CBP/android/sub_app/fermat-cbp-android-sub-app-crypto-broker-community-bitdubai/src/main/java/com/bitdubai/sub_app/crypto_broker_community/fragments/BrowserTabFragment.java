@@ -602,20 +602,17 @@ public class BrowserTabFragment
     private void showOrHideEmptyView() {
         final boolean show = cryptoBrokerCommunityInformationList.isEmpty();
         final int animationResourceId = show ? android.R.anim.fade_in : android.R.anim.fade_out;
-        if(isAttached) {
-            Animation anim = AnimationUtils.loadAnimation(getActivity(), animationResourceId);
-            if (show && (noContacts.getVisibility() == View.GONE || noContacts.getVisibility() == View.INVISIBLE)) {
-                noContacts.setAnimation(anim);
-                noContacts.setVisibility(View.VISIBLE);
-                recyclerView.setVisibility(View.INVISIBLE);
 
-            } else if (!show && noContacts.getVisibility() == View.VISIBLE) {
-                noContacts.setAnimation(anim);
-                noContacts.setVisibility(View.GONE);
-                recyclerView.setVisibility(View.VISIBLE);
-            }
-        }else{
-            Log.e(TAG,"Fragment not attached");
+        Animation anim = AnimationUtils.loadAnimation(getActivity(), animationResourceId);
+        if (show && (noContacts.getVisibility() == View.GONE || noContacts.getVisibility() == View.INVISIBLE)) {
+            noContacts.setAnimation(anim);
+            noContacts.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.INVISIBLE);
+
+        } else if (!show && noContacts.getVisibility() == View.VISIBLE) {
+            noContacts.setAnimation(anim);
+            noContacts.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
         }
     }
 

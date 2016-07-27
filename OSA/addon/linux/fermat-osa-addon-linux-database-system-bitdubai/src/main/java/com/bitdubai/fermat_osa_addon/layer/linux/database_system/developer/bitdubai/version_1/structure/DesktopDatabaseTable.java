@@ -82,8 +82,12 @@ public class DesktopDatabaseTable implements DatabaseTable {
 
         System.out.println(query);
 
+        /*
+
         synchronized (connectionPool) {
-            try (Connection connection = connectionPool.getConnection();
+            try (
+
+                    Connection connection = connectionPool.getConnection();
                  Statement stmt = connection.createStatement();
                  ResultSet rs = stmt.executeQuery(query)) {
 
@@ -115,7 +119,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
                 e.printStackTrace();
                 throw new CantLoadTableToMemoryException(e);
             }
-        }
+        } */
 
         return databaseTableRecords;
     }
@@ -244,7 +248,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
         }
 
         String SQL_QUERY = "INSERT INTO " + tableName + "(" + StringUtils.join(strRecords, ",") + ")" + " VALUES (" + StringUtils.join(strSigns, ",") + ")";
-
+        /*
         synchronized (connectionPool) {
             try (Connection connection = connectionPool.getConnection();
                  PreparedStatement preparedStatement = connection.prepareStatement(SQL_QUERY)) {
@@ -259,6 +263,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
                 throw new CantInsertRecordException(exception);
             }
         }
+        */
     }
 
     @Override
@@ -266,7 +271,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
 
         String SQL_QUERY = "DELETE FROM " + tableName;
 
-        synchronized (connectionPool) {
+       /* synchronized (connectionPool) {
             try (Connection connection = connectionPool.getConnection();
                  Statement stmt = connection.createStatement()) {
 
@@ -277,6 +282,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
                 throw new CantTruncateTableException(e, "", "Unhandled error.");
             }
         }
+        */
     }
 
     @Override
@@ -284,7 +290,7 @@ public class DesktopDatabaseTable implements DatabaseTable {
 
         String SQL_QUERY = "SELECT COUNT(*) as COUNT FROM " + tableName + makeFilter();
 
-        synchronized (connectionPool) {
+       /* synchronized (connectionPool) {
             try (Connection connection = connectionPool.getConnection();
                  Statement stmt = connection.createStatement();
                  ResultSet rs = stmt.executeQuery(SQL_QUERY)) {
@@ -297,7 +303,9 @@ public class DesktopDatabaseTable implements DatabaseTable {
                 e.printStackTrace();
                 throw new CantLoadTableToMemoryException(e);
             }
-        }
+        }*/
+
+        return 0;
     }
 
     private String buildNearbyLocationOrderSentence(final DesktopDatabaseTableNearbyLocationOrder nearbyLocationOrder) {

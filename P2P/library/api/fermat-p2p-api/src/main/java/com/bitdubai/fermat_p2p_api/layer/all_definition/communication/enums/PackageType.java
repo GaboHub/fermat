@@ -1,3 +1,9 @@
+/*
+ * @#PackageType.java - 2015
+ * Copyright bitDubai.com., All rights reserved.
+ * You may not modify, use, reproduce or distribute this software.
+ * BITDUBAI/CONFIDENTIAL
+ */
 package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums;
 
 /**

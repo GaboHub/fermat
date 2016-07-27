@@ -63,8 +63,8 @@ public class FermatLinuxAppMain {
              */
 
             fermatSystem.startAndGetPluginVersion(new PluginVersionReference(Platforms.COMMUNICATION_PLATFORM, Layers.COMMUNICATION, Plugins.NETWORK_NODE, Developers.BITDUBAI, new Version()));
-
-           /* final NetworkClientManager clientManager = (NetworkClientManager) fermatSystem.startAndGetPluginVersion(new PluginVersionReference(Platforms.COMMUNICATION_PLATFORM, Layers.COMMUNICATION, Plugins.NETWORK_CLIENT, Developers.BITDUBAI, new Version()));
+/*
+            final NetworkClientManager clientManager = (NetworkClientManager) fermatSystem.startAndGetPluginVersion(new PluginVersionReference(Platforms.COMMUNICATION_PLATFORM, Layers.COMMUNICATION, Plugins.NETWORK_CLIENT, Developers.BITDUBAI, new Version()));
             final ChatIdentityManager chatIdentityManager = (ChatIdentityManager) fermatSystem.startAndGetPluginVersion(new PluginVersionReference(Platforms.CHAT_PLATFORM, Layers.IDENTITY, Plugins.CHAT_IDENTITY, Developers.BITDUBAI, new Version()));
 
             ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(4);
@@ -110,8 +110,8 @@ public class FermatLinuxAppMain {
                     15,
                     5,
                     TimeUnit.SECONDS
-            );*/
-
+            );
+*/
             System.out.println("FERMAT - Linux Core - started satisfactory...");
 
         } catch (Exception e) {

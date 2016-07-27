@@ -284,7 +284,6 @@ public class ActorProfile extends Profile {
                 ", photo=" + (photo != null ? "true" : "false") +
                 ", nsIdentityPublicKey ='" + nsIdentityPublicKey + '\'' +
                 ", clientIdentityPublicKey ='" + clientIdentityPublicKey + '\'' +
-                ", status ='"+getStatus() + '\'' +
                 '}';
     }
 }
