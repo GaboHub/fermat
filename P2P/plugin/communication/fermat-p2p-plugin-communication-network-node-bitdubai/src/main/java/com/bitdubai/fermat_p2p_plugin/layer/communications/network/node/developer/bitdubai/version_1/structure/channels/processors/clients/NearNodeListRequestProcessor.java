@@ -175,7 +175,7 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
 
     private JPADaoFactory getJPADaoFactory(){
         if (jpaDaoFactory == null)
-            jpaDaoFactory = (JPADaoFactory) NodeContext.get(NodeContextItem.DAO_FACTORY);
+            jpaDaoFactory = JPADaoFactory.getInstance();
 
         return jpaDaoFactory;
     }

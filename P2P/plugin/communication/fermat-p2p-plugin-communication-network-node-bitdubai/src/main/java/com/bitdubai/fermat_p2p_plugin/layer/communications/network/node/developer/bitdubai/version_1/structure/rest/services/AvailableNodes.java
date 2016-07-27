@@ -67,7 +67,7 @@ public class AvailableNodes implements RestFulServices {
      * Constructor
      */
     public AvailableNodes(){
-        daoFactory = (JPADaoFactory) NodeContext.get(NodeContextItem.DAO_FACTORY);
+        daoFactory = JPADaoFactory.getInstance();
         this.gson = GsonProvider.getGson();
     }
 

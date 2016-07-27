@@ -56,6 +56,15 @@ public class ActorCatalogDao extends AbstractBaseDao<ActorCatalog> {
      */
     private final Logger LOG = Logger.getLogger(ClassUtils.getShortClassName(AbstractBaseDao.class));
 
+    /**
+     * This method returns a list of actors filtered by the discoveryQueryParameters
+     * @param discoveryQueryParameters
+     * @param clientIdentityPublicKey
+     * @param max
+     * @param offset
+     * @return
+     * @throws CantReadRecordDataBaseException
+     */
     public List<ActorCatalog> findAll(
             final DiscoveryQueryParameters discoveryQueryParameters,
             final String clientIdentityPublicKey,

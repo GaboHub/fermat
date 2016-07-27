@@ -343,10 +343,9 @@ public class Profiles implements RestFulServices {
      *
      * @return a dao factory object.
      */
-    private JPADaoFactory getDaoFactory() {
-
+    private JPADaoFactory getDaoFactory(){
         if (daoFactory == null)
-            daoFactory = (JPADaoFactory) NodeContext.get(NodeContextItem.DAO_FACTORY);
+            daoFactory = JPADaoFactory.getInstance();
 
         return daoFactory;
     }

@@ -20,6 +20,8 @@ import org.jboss.logging.Logger;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import javax.websocket.Session;
 
 /**
@@ -124,6 +126,35 @@ public class ClientCheckInDao  extends AbstractBaseDao<ClientCheckIn>{
             connection.close();
         }
 
+    }
+
+    /**
+     * This method deletes all the client checked
+     * @throws CantDeleteRecordDataBaseException
+     */
+    public void deleteAll() throws CantDeleteRecordDataBaseException {
+        LOG.debug("Executing deleting all the client checked");
+
+        EntityManager connection = getConnection();
+        EntityTransaction transaction = connection.getTransaction();
+        try{
+            transaction.begin();
+            Query query = connection.createNamedQuery("DELETE FROM ClientCheckIn");
+            int count = query.executeUpdate();
+            LOG.debug(new StringBuilder("Deleted ")
+                    .append(count)
+                    .append(" records"));
+            transaction.commit();
+        } catch (Exception e){
+            transaction.rollback();
+            throw new CantDeleteRecordDataBaseException(
+                    CantReadRecordDataBaseException.DEFAULT_MESSAGE,
+                    e,
+                    "Network Node",
+                    "Cannot delete all the clients checked");
+        }finally {
+            connection.close();
+        }
     }
 
 }
